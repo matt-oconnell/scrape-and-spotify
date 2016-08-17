@@ -5,6 +5,7 @@ const cheerio = require('cheerio')
 const app = express()
 const SpotifyWebApi = require('spotify-web-api-node')
 const stringSimilarity = require('string-similarity')
+const samplePlaylist = require('./data/2016-06-28.json')
 
 require('dotenv').load()
 
@@ -76,25 +77,17 @@ app.get('/spotify', function(req, res) {
 
 
 app.get('/callback', (req, res) => {
-
 	const credentials = {
 		clientId: env.CLIENT_ID,
 		clientSecret: env.CLIENT_SECRET,
 		redirectUri: 'http://localhost:8081/callback'
 	}
-
 	const spotifyApi = new SpotifyWebApi(credentials)
-
-	// The code that's returned as a query parameter to the redirect URI
+	// Verification code
 	const code = req.query.code
 
+	const sampleSong = samplePlaylist[0]
 	let progress = ''
-
-	const sampleSong = {
-		artist: "Margaret Glaspy",
-		title: "You and I"
-	}
-
 	let playlistId = null
 
 	spotifyApi.authorizationCodeGrant(code)
@@ -117,14 +110,19 @@ app.get('/callback', (req, res) => {
 		})
 		// Add it to playlist
 		.then(function(data) {
+			res.send(111)
 			const rawTrack = data.body.tracks.items[0]
-			const artist = rawTrack.artists[0].name // if any artists match
-			const title = rawTrack.name
+			const artist = rawTrack.artists[0].name.toLowerCase() // if any artists match
+			const title = rawTrack.name.toLowerCase()
 			const trackId = rawTrack.id
 
 			// See if we actually found the right song
-			const artistSimilarity = stringSimilarity.compareTwoStrings(sampleSong.artist, artist)
-			const titleSimilarity = stringSimilarity.compareTwoStrings(sampleSong.title, title)
+			let artistSimilarity = stringSimilarity.compareTwoStrings(sampleSong.artist, artist)
+			let titleSimilarity = stringSimilarity.compareTwoStrings(sampleSong.title, title)
+
+			titleSimilarity = title.indexOf(sampleSong.title.toLowerCase()) !== -1 ? 1 : titleSimilarity
+			artistSimilarity = artist.indexOf(sampleSong.artist.toLowerCase()) !== -1 ? 1 : artistSimilarity
+
 			const totalSim = artistSimilarity + titleSimilarity
 
 			if(totalSim > 1.65) {
