@@ -8,6 +8,7 @@
     "express": "latest",
     "request": "latest",
     "spotify-web-api-node": "^2.3.5",
+    "string-similarity": "^1.1.0",
     "url": "^0.11.0"
   }
 }

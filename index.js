@@ -4,6 +4,8 @@ const request = require('request')
 const cheerio = require('cheerio')
 const app = express()
 const SpotifyWebApi = require('spotify-web-api-node')
+const stringSimilarity = require('string-similarity')
+
 require('dotenv').load()
 
 const {env} = process
@@ -74,6 +76,7 @@ app.get('/spotify', function(req, res) {
 
 
 app.get('/callback', (req, res) => {
+
 	const credentials = {
 		clientId: env.CLIENT_ID,
 		clientSecret: env.CLIENT_SECRET,
@@ -87,22 +90,53 @@ app.get('/callback', (req, res) => {
 
 	let progress = ''
 
+	const sampleSong = {
+		artist: "Margaret Glaspy",
+		title: "You and I"
+	}
+
+	let playlistId = null
+
 	spotifyApi.authorizationCodeGrant(code)
 		.then(function(data) {
+			console.log('The token expires in ' + data.body['expires_in']);
+			console.log('The access token is ' + data.body['access_token']);
+			console.log('The refresh token is ' + data.body['refresh_token']);
+
+			// Set the access token on the API object to use it in later calls
 			spotifyApi.setAccessToken(data.body['access_token']);
-			return spotifyApi.getMe()
+			spotifyApi.setRefreshToken(data.body['refresh_token']);
+			// create playlist
+			return spotifyApi.createPlaylist('matt_oconnell', 'My Cool Playlist', {'public': false})
 		})
-		.then(function(data) {
-			const id = data.body.id
-			progress += `<br>User ID: ${id}`
-			return spotifyApi.createPlaylist(id, 'My Cool Playlist', {'public': false})
+		// Search for track
+		.then(data => {
+			playlistId = data.body.id
+			progress += `<br>Ok. Created playlist: ${playlistId}`
+			return spotifyApi.searchTracks(`track:${sampleSong.title} artist:${sampleSong.artist}`)
 		})
+		// Add it to playlist
 		.then(function(data) {
-			progress += `<br>Ok. Created playlist here: ${data.body.tracks.href}`
-			res.send(progress)
+			const rawTrack = data.body.tracks.items[0]
+			const artist = rawTrack.artists[0].name // if any artists match
+			const title = rawTrack.name
+			const trackId = rawTrack.id
+
+			// See if we actually found the right song
+			const artistSimilarity = stringSimilarity.compareTwoStrings(sampleSong.artist, artist)
+			const titleSimilarity = stringSimilarity.compareTwoStrings(sampleSong.title, title)
+			const totalSim = artistSimilarity + titleSimilarity
+
+			if(totalSim > 1.65) {
+				return spotifyApi.addTracksToPlaylist('matt_oconnell', playlistId, [`spotify:track:${trackId}`])
+			} else {
+				console.log(`!! totalSim for ${sampleSong.title} by ${sampleSong.artist} was ${totalSim}`)
+				return false
+			}
 		})
 		.catch(function(err) {
-			res.send('Error', err.message)
+			console.log('ERROR', err)
+			res.send(err)
 		});
 })
 
