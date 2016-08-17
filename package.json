@@ -1,0 +1,11 @@
+{
+  "name": "npr",
+  "version": "0.0.1",
+  "main": "scrape.js",
+  "dependencies": {
+    "cheerio": "latest",
+    "express": "latest",
+    "request": "latest",
+    "url": "^0.11.0"
+  }
+}
