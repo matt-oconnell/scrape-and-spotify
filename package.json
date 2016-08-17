@@ -1,11 +1,13 @@
 {
   "name": "npr",
   "version": "0.0.1",
-  "main": "scrape.js",
+  "main": "index.js",
   "dependencies": {
     "cheerio": "latest",
+    "dotenv": "^2.0.0",
     "express": "latest",
     "request": "latest",
+    "spotify-web-api-node": "^2.3.5",
     "url": "^0.11.0"
   }
 }
