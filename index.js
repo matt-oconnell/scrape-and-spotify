@@ -2,60 +2,93 @@ const express = require('express')
 const fs = require('fs')
 const request = require('request')
 const cheerio = require('cheerio')
+const async = require('async')
 const app = express()
 const SpotifyWebApi = require('spotify-web-api-node')
 const stringSimilarity = require('string-similarity')
-const samplePlaylist = require('./data/2016-06-28.json')
+// const samplePlaylist = require('./data/2016-06-28.json')
 
 require('dotenv').load()
 
 const {env} = process
 
-app.get('/scrape', function() {
+app.get('/scrape', function(req, res) {
 
 	const d = new Date()
 	let dateToUse = null
-	for(let i = 50; i > 0; i--) {
-
+	let urls = []
+	for(let i = 100; i > 0; i--) {
 		d.setDate(d.getDate() - 1)
 		dateToUse = d.toISOString().split('T')[0]
 		const url = `http://nowplaying.wfuv.org/pleditor/external/playlist.php?id=2&day=${dateToUse}`
-		const json = {}
+		urls.push(url)
+	}
+	// res.send(queue)
+	const q = async.queue(scrape, 10)
 
-		request(url, function(error, response, html) {
-			if(!error) {
-				const $ = cheerio.load(html)
+	let results = []
 
-				const title = $('#date').val()
-				const songs = []
-
-				// Artists
-				$('.music td:nth-child(2)').each((i, el) => {
-					songs[i] = {
-						artist: $(el).text(),
-						title: null
-					}
-				})
-
-				// Titles
-				$('.music td:nth-child(3)').each((i, el) => {
-					songs[i].title = $(el).text()
-				})
-
-				if(!title) {
-					console.log(`Nothin good for ${dateToUse}`)
-				}
-
-			} else {
-				console.log(`Error`, error)
-			}
-
-			fs.writeFile(`data/${title}.json`, JSON.stringify(songs, null, 4), function(err) {
-				console.log(`${dateToUse} successfully written!`)
+	q.drain = () => {
+		console.log('URLs Scraped....')
+		const writeQ = async.queue(writeToFile, 5)
+		results.forEach(playlist => {
+			writeQ.push(playlist, (title) => {
+				console.log(`Queue: Finished writing ${title}`)
 			})
 		})
 	}
+
+	urls.forEach(url => {
+		q.push(url, (title, songs) => {
+			results.push({title: title, songs: songs})
+			console.log(`Queue: Finished processing ${title}. ${songs.length} songs.`)
+		})
+	})
+
 })
+
+function scrape(url, callback) {
+	request(url, function(error, response, html) {
+		if(!error) {
+			const $ = cheerio.load(html)
+
+			const title = $('#date').val()
+			const songs = []
+			const json = {}
+
+			// Artists
+			$('.music td:nth-child(2)').each((i, el) => {
+				songs[i] = {
+					artist: $(el).text(),
+					title: null
+				}
+			})
+
+			// Titles
+			$('.music td:nth-child(3)').each((i, el) => {
+				songs[i].title = $(el).text()
+			})
+
+			if(!title) {
+				console.log(`Nothin good for ${url}`)
+			}
+
+			callback(title, songs)
+
+		} else {
+			console.log(`Error`, error)
+		}
+
+	})
+}
+
+function writeToFile(playlist, callback) {
+	const {title, songs} = playlist
+	fs.writeFile(`data/${title}.json`, JSON.stringify(songs, null, 4), function(err) {
+		console.log(`${title} successfully written!`)
+		callback(title)
+	})
+}
 
 /*
  Visit this route to generate a new playlist
