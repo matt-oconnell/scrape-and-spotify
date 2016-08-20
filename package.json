@@ -7,6 +7,7 @@
     "cheerio": "latest",
     "dotenv": "^2.0.0",
     "express": "latest",
+    "progress": "^1.1.8",
     "request": "latest",
     "spotify-web-api-node": "^2.3.5",
     "string-similarity": "^1.1.0",
