@@ -7,6 +7,8 @@
     "cheerio": "latest",
     "dotenv": "^2.0.0",
     "express": "latest",
+    "glob": "^7.0.5",
+    "lodash": "^4.15.0",
     "progress": "^1.1.8",
     "request": "latest",
     "spotify-web-api-node": "^2.3.5",
