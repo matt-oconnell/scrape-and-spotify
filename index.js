@@ -1,106 +1,36 @@
-const express = require('express')
-const fs = require('fs')
-const request = require('request')
-const cheerio = require('cheerio')
-const async = require('async')
-const app = express()
-const SpotifyWebApi = require('spotify-web-api-node')
 const stringSimilarity = require('string-similarity')
-let playlistName = 'WFUV'
-// const songs = require(`./data/${playlistName}.json`)
+const SpotifyWebApi = require('spotify-web-api-node')
 const ProgressBar = require('progress')
+const express = require('express')
+const request = require('request')
+const async = require('async')
+const glob = require("glob")
 const _ = require('lodash')
-var glob = require("glob")
+const fs = require('fs')
+const app = express()
+
+let playlistName = 'WFUVtest'
+let dir = 'test'
 
 require('dotenv').load()
 
 const {env} = process
 
-app.get('/scrape', function(req, res) {
-
-	const d = new Date()
-	let dateToUse = null
-	let urls = []
-	const count = 100
-	let bar = new ProgressBar(':bar', {total: count});
-
-	for(let i = count; i > 0; i--) {
-		d.setDate(d.getDate() - 1)
-		dateToUse = d.toISOString().split('T')[0]
-		const url = `http://nowplaying.wfuv.org/pleditor/external/playlist.php?id=2&day=${dateToUse}`
-		urls.push(url)
-	}
-
-	async.eachLimit(urls, 10,
-		function(url, callback) {
-			scrape(url, callback)
-		},
-		function(err, data) {
-			if(err) {
-				console.log('Error scraping and stuff', err)
-			} else {
-				console.log('Done', data)
-			}
-		}
-	)
-})
-
-function scrape(url, callback) {
-	request(url, function(error, response, html) {
-		if(!error) {
-			const $ = cheerio.load(html)
-			const title = $('#date').val()
-			const songs = []
-			console.log(`scraping ${title}`)
-
-
-			// Artists
-			$('.music td:nth-child(2)').each((i, el) => {
-				songs[i] = {
-					artist: $(el).text(),
-					title: null
-				}
-			})
-			// Titles
-			$('.music td:nth-child(3)').each((i, el) => {
-				songs[i].title = $(el).text()
-			})
-			if(!title) {
-				console.log(`Nothin good for ${url}`)
-			}
-			writeToFile(title, songs, callback)
-		} else {
-			console.log(`Error`, error)
-		}
-	})
-}
-
-function writeToFile(title, songs, callback) {
-	fs.writeFile(`data/${title}.json`, JSON.stringify(songs, null, 4), function(err) {
-		console.log(`${title} successfully written!`)
-		callback(null, title)
-		if(err) {
-			console.log('error writing to file', err)
-		}
-	})
-}
-
-
-app.get('/callback', function(req, res) {
+app.get('/callback', (req, res) => {
 
 	// Get all JSON files
-	glob('data/*.json', {}, function(er, files) {
+	glob(`${dir}/*.json`, {}, (er, files) => {
 		let arr = []
 		async.eachLimit(files, 10,
 			function(item, callback) {
-				fs.readFile(item, 'utf8', function(err, data) {
+				fs.readFile(item, 'utf8', (err, data) => {
 					if(err) throw err;
 					let parsedJSON = JSON.parse(data);
 					arr = arr.concat(parsedJSON)
 					callback(null, arr)
 				});
 			},
-			function(err) {
+			err => {
 				if(err) {
 					console.log('Error reading files', err)
 				} else {
@@ -182,10 +112,10 @@ function createPlaylist(songs, req, res) {
 								callback(null, 'done')
 							})
 							.catch(e => console.log('Error searching and adding track ', e))
-					}, 100)
+					}, 0)
 				},
 				// EACH Final
-				function(err) {
+				err => {
 					// All tasks are done now
 					if(err) {
 						console.log('Error', err)
@@ -196,24 +126,14 @@ function createPlaylist(songs, req, res) {
 			)
 		})
 		.catch(e => {
-			console.log('outside error', e)
+			console.log('Outside error', e)
 		})
 }
-
-
-/*
- clean up.
- */
-app.get('/callback', function(req, res) {
-
-
-})
-
 
 /*
  Visit this route to generate a new playlist
  */
-app.get('/spotify', function(req, res) {
+app.get('/', (req, res) => {
 	const scopes = ['playlist-modify-public', 'playlist-modify-private'],
 		redirectUri = 'http://localhost:8081/callback',
 		clientId = env.CLIENT_ID
