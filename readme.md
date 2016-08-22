@@ -11,6 +11,6 @@
 - Run `node index.js`
 - Visit `localhost:8081` in your browser. You need to authenticate using your spotify account. If you successfully log in, you will be redirected to a callback page. You can see the playlist upload progress in your terminal.
 
-All the music is currently being pulled from `http://www.wfuv.org/`. This is an *awesome* non-profit station for Forham University.   
+All the music is currently being pulled from [http://www.wfuv.org/](http://www.wfuv.org/). This is an *awesome* non-profit station for Forham University.   
 
 This project is experimental but I am considering abstracting it to work using different sources.
