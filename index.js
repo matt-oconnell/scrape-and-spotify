@@ -9,8 +9,7 @@ const _ = require('lodash')
 const fs = require('fs')
 const app = express()
 
-let playlistName = 'WFUVtest'
-let dir = 'test'
+const config = require('./config')
 
 require('dotenv').load()
 
@@ -19,7 +18,7 @@ const {env} = process
 app.get('/callback', (req, res) => {
 
 	// Get all JSON files
-	glob(`${dir}/*.json`, {}, (er, files) => {
+	glob(`${config.dir}/*.json`, {}, (er, files) => {
 		let arr = []
 		async.eachLimit(files, 10,
 			function(item, callback) {
@@ -62,7 +61,11 @@ function createPlaylist(songs, req, res) {
 		.then(data => {
 			spotifyApi.setAccessToken(data.body['access_token'])
 			spotifyApi.setRefreshToken(data.body['refresh_token'])
-			return spotifyApi.createPlaylist('matt_oconnell', playlistName, {'public': false})
+			console.log(data)
+			return spotifyApi.getMe()
+		})
+		.then(userData => {
+			return spotifyApi.createPlaylist(userData.body.id, config.playlistName, {'public': false})
 		})
 		.then(data => {
 			playlistId = data.body.id

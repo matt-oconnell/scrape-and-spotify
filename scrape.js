@@ -4,10 +4,7 @@ const cheerio = require('cheerio')
 const async = require('async')
 const fs = require('fs')
 
-const config = {
-	dir: 'test',
-	count: 365
-}
+const config = require('./config')
 
 const bar = new ProgressBar(':bar', {total: config.count})
 const d = new Date()
