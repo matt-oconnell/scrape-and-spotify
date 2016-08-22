@@ -10,10 +10,9 @@ const fs = require('fs')
 const app = express()
 
 const config = require('./config')
+const {env} = process
 
 require('dotenv').load()
-
-const {env} = process
 
 app.get('/callback', (req, res) => {
 
@@ -54,6 +53,7 @@ function createPlaylist(songs, req, res) {
 	const code = req.query.code
 
 	let playlistId = null
+	let userId = null
 	let trackId = null
 
 	/* Auth flow */
@@ -65,7 +65,8 @@ function createPlaylist(songs, req, res) {
 			return spotifyApi.getMe()
 		})
 		.then(userData => {
-			return spotifyApi.createPlaylist(userData.body.id, config.playlistName, {'public': false})
+			userId = userData.body.id
+			return spotifyApi.createPlaylist(userId, config.playlistName, {'public': false})
 		})
 		.then(data => {
 			playlistId = data.body.id
@@ -92,17 +93,16 @@ function createPlaylist(songs, req, res) {
 								// See if we actually found the right song
 								let artistSimilarity = stringSimilarity.compareTwoStrings(song.artist, artist)
 								let titleSimilarity = stringSimilarity.compareTwoStrings(song.title, title)
-
 								titleSimilarity = title.indexOf(song.title.toLowerCase()) !== -1 ? 1 : titleSimilarity
 								artistSimilarity = artist.indexOf(song.artist.toLowerCase()) !== -1 ? 1 : artistSimilarity
 
 								const totalSim = artistSimilarity + titleSimilarity
 
 								if(totalSim > 1.65) {
-									console.log('yes yes yes', song.title)
-									return spotifyApi.addTracksToPlaylist('matt_oconnell', playlistId, [`spotify:track:${trackId}`])
+									console.log(`Verified: ${song.title}`)
+									return spotifyApi.addTracksToPlaylist(userId, playlistId, [`spotify:track:${trackId}`])
 								} else {
-									return new Error('Total sim too low', totalSim)
+									return new Error(`Total sim too low: ${totalSim}`)
 								}
 							})
 							.then(data => {
